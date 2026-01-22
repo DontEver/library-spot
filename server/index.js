@@ -933,6 +933,49 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// ------------------------------
+// Background refresh (keeps cache hot even with 0 visitors)
+// ------------------------------
+const BACKGROUND_REFRESH_MS = Number(process.env.BACKGROUND_REFRESH_MS || 60_000);
+
+let backgroundInFlight = null;
+
+async function refreshAllDaysInBackground() {
+  // prevent overlapping runs if one minute overlaps the next
+  if (backgroundInFlight) return backgroundInFlight;
+
+  backgroundInFlight = (async () => {
+    try {
+      const dayStrs = getNext8DaysNY();
+      console.log(`🔄 Background refresh: ${dayStrs.join(", ")}`);
+
+      await Promise.all(
+        dayStrs.map(async (dateStr) => {
+          try {
+            // Force refresh so it updates even if TTL hasn't expired
+            await getAllLibraryData(dateStr, { force: true });
+          } catch (e) {
+            console.warn(`⚠️ Background refresh failed for ${dateStr}:`, e?.message || e);
+          }
+        }),
+      );
+
+      // Invalidate the cached HTML so the next visitor gets freshly injected data
+      cachedBootstrapHtml = null;
+      cachedBootstrapAt = 0;
+    } finally {
+      backgroundInFlight = null;
+    }
+  })();
+
+  return backgroundInFlight;
+}
+
+// warm immediately on boot, then every minute
+refreshAllDaysInBackground();
+setInterval(refreshAllDaysInBackground, BACKGROUND_REFRESH_MS);
+
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🏛️  LibrarySpot running on http://localhost:${PORT}`);
