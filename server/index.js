@@ -43,6 +43,8 @@ app.use(
 
 const BOOTSTRAP_TTL = 60 * 1000; // 1 minute
 
+app.set("trust proxy", true);
+
 let indexHtmlTemplate = null;
 
 // Cache the *final rendered HTML* (with injected window.__LIBRARYSPOT_INITIAL__)

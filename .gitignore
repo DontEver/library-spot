@@ -1,31 +1,31 @@
-# Dependencies
+# dependencies
 node_modules/
+server/node_modules/
 
-# Build output
+# build output
 dist/
+server/dist/
+.vite/
+coverage/
 
-# Editor directories
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Local env files
-.env
-.env.local
-.env.*.local
-
-# Log files
+# logs
+*.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
-*.log
 
-# Vite
-*.local
+# env / secrets (local only)
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# temp
+*.tmp
+*.swp

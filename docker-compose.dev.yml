@@ -1,0 +1,11 @@
+services:
+  library-dev:
+    container_name: library-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3100:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped

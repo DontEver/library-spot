@@ -17,7 +17,7 @@ No more checking multiple websites or walking around campus looking for an open 
 
 - **🏛️ All Libraries, One View** — See availability across 18th Avenue, Thompson, FAES, and Health Sciences
 - **📅 7-Day Calendar** — View and plan reservations up to a week in advance
-- **⏰ Real-Time Clock** — Uses WorldTimeAPI to get accurate EST time
+- **⏰ Real-Time Clock** — Displays current America/New_York time (client-ticking, server-synced when available)
 - **🕐 30-Minute Slots** — Matches OSU's booking system intervals
 - **📍 Smart Time Filtering** — For today, only shows remaining slots; future dates show all slots
 - **⚡ Live Data** — Fetches directly from OSU's room reservation API
@@ -35,29 +35,39 @@ npm install
 # Start development server
 npm run dev
 
-# Open http://localhost:5173
-```
+# Open the URL Vite prints (usually http://localhost:5173)
+````
 
 ### Full Stack (With Live Data)
 
+Run the backend and frontend separately:
+
 ```bash
-# Install all dependencies including server
+# Install root deps
 npm install
-cd server && npm install puppeteer express cors
 
-# Start both frontend and backend
-npm run dev:full
+# Install server deps
+cd server
+npm install
+cd ..
 
-# Frontend: http://localhost:5173
-# API: http://localhost:3001
+# Start backend (serves API + page)
+node server/index.js
+# Open http://localhost:3000
+
+# In another terminal, start frontend dev server (optional)
+npm run dev
+# Open the URL Vite prints (usually http://localhost:5173)
 ```
+
+> Note: Health Sciences Library scraping uses Puppeteer. If you're running without Docker and HSL scraping fails due to missing Chromium, install Puppeteer/Chromium requirements for your OS.
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   React App     │────▶│  Express API    │────▶│  OSU LibCal     │
-│   (Frontend)    │◀────│  (Backend)      │◀────│  (Data Source)  │
+│   React App     │────▶│  Express API    │────▶│  OSU / LibCal    │
+│   (Frontend)    │◀────│  (Backend)      │◀────│  (Data Source)   │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                                │
                                ▼
@@ -67,10 +77,14 @@ npm run dev:full
                         └─────────────────┘
 ```
 
+> In Docker/production-style runs, the backend serves the built React app (`dist/`) and injects preloaded availability into the initial HTML for fast loads.
+
 ## 🔍 How the Data Works
 
 ### OSU API (18th Ave, Thompson, FAES)
+
 Direct JSON API - no scraping needed!
+
 ```
 GET https://content.osu.edu/v2/library/roomreservation/api/v1/locationsearch/{locationId}/{date}
 
@@ -81,12 +95,14 @@ Location IDs:
 ```
 
 Key fields:
-- `open: true/false` — Library is open at this time
-- `taken: true/false` — Slot is booked
-- `maximumCapacity` — Room capacity
-- `whiteboard`, `hdtv`, `videoConferencing` — Amenities
+
+* `open: true/false` — Library is open at this time
+* `taken: true/false` — Slot is booked
+* `maximumCapacity` — Room capacity
+* `whiteboard`, `hdtv`, `videoConferencing` — Amenities
 
 ### Health Sciences Library (LibCal)
+
 Uses Puppeteer to scrape the LibCal page since it's JavaScript-rendered.
 
 ```html
@@ -101,59 +117,23 @@ Uses Puppeteer to scrape the LibCal page since it's JavaScript-rendered.
 
 ## 📡 API Endpoints
 
-```
-GET  /api/libraries?date=YYYY-MM-DD  - Get all libraries (date optional, defaults to today)
-GET  /api/libraries/:id?date=...     - Get specific library
-POST /api/refresh?date=...           - Force refresh cache
-GET  /api/health                     - Health check
-```
+| Method | Endpoint                             | Description                                          |
+| ------ | ------------------------------------ | ---------------------------------------------------- |
+| GET    | `/api/libraries?date=YYYY-MM-DD`     | Get all libraries (date optional, defaults to today) |
+| GET    | `/api/libraries/:id?date=YYYY-MM-DD` | Get a specific library                               |
+| POST   | `/api/refresh?date=YYYY-MM-DD`       | Force refresh the cache (date optional)              |
+| GET    | `/api/time`                          | Current America/New_York time + server timestamp     |
+| GET    | `/api/health`                        | Server health check                                  |
 
 ### Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| Frontend | React 18 + Vite | Fast, modern UI |
-| Styling | Tailwind CSS | Utility-first styling |
-| Backend | Express.js | API server |
-| Scraping | Puppeteer | Handles JS-rendered LibCal pages |
-| Caching | In-memory | 5-minute TTL to reduce load |
-
-## 📡 API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/libraries` | Get all libraries with current availability |
-| GET | `/api/libraries/:id` | Get specific library details |
-| POST | `/api/refresh` | Force refresh the cache |
-| GET | `/api/health` | Server health check |
-
-### Example Response
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "hsl",
-      "name": "Health Sciences Library",
-      "url": "https://hsl-osu.libcal.com/spaces?lid=694&gid=24674",
-      "rooms": [
-        {
-          "id": "h-360a",
-          "name": "Room 360A",
-          "capacity": 5,
-          "amenities": ["whiteboard", "monitor"],
-          "slots": [
-            { "time": "9:00 AM", "available": true },
-            { "time": "10:00 AM", "available": false }
-          ]
-        }
-      ],
-      "scrapedAt": "2025-01-19T15:30:00Z"
-    }
-  ]
-}
-```
+| Layer    | Technology      | Purpose                          |
+| -------- | --------------- | -------------------------------- |
+| Frontend | React 18 + Vite | Fast, modern UI                  |
+| Styling  | Tailwind CSS    | Utility-first styling            |
+| Backend  | Express.js      | API + HTML bootstrap server      |
+| Scraping | Puppeteer       | Handles JS-rendered LibCal pages |
+| Caching  | In-memory       | TTL cache to reduce load         |
 
 ## 🔧 Configuration
 
@@ -186,41 +166,50 @@ const LIBCAL_SOURCES = [
 ### Environment Variables
 
 ```bash
-PORT=3001              # API server port
-CACHE_TTL=300000       # Cache duration in ms (default: 5 min)
+PORT=3000              # Server port
+CACHE_TTL=50000        # Cache duration in ms
+NODE_ENV=production    # Serve built frontend from dist/ (Docker/prod-style)
 ```
 
 ## 📦 Deployment
 
-### Frontend (Vercel/Netlify)
+### Docker (Recommended)
 
-```bash
-npm run build
-# Deploy the `dist/` folder
+Run as a single container that builds the frontend and serves it via the backend.
+
+Create `docker-compose.dev.yml`:
+
+```yaml
+services:
+  library-dev:
+    container_name: library-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3100:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
 ```
 
-### Backend (Railway/Render/Fly.io)
+Start it:
 
-The server requires Puppeteer, which needs a Chromium binary. Use a Docker deployment:
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
+```
 
-```dockerfile
-FROM node:18-slim
+Verify:
 
-# Install Chromium dependencies
-RUN apt-get update && apt-get install -y \
-    chromium \
-    --no-install-recommends
+```bash
+curl -I http://127.0.0.1:3100
+curl http://127.0.0.1:3100/api/health
+```
 
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+Open:
 
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-
-EXPOSE 3001
-CMD ["node", "server/index.js"]
+```
+http://<YOUR_HOST>:3100
 ```
 
 ## 🤝 Contributing
@@ -233,12 +222,12 @@ CMD ["node", "server/index.js"]
 
 ### Ideas for Contribution
 
-- [ ] Add more OSU libraries
-- [ ] Implement push notifications for room availability
-- [ ] Add floor maps showing room locations
-- [ ] Create a mobile app (React Native)
-- [ ] Add historical usage analytics
-- [ ] Support other universities using LibCal
+* [ ] Add more OSU libraries
+* [ ] Implement push notifications for room availability
+* [ ] Add floor maps showing room locations
+* [ ] Create a mobile app (React Native)
+* [ ] Add historical usage analytics
+* [ ] Support other universities using LibCal
 
 ## ⚠️ Disclaimer
 
@@ -251,3 +240,6 @@ MIT — Use it however you want!
 ---
 
 Built with ❤️ by Xinci Ma for OSU students who are tired of walking around looking for study rooms.
+
+```
+```

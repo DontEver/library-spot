@@ -1246,91 +1246,104 @@ export default function App() {
     );
   };
 
-  // Sync with backend server once, then use local clock with offset
+  // Sync with backend server once, then tick using local clock + offset
   useEffect(() => {
     let serverOffset = 0;
     let dateStr = "";
+
+    const formatDateStr = (ms) =>
+      new Date(ms).toLocaleDateString("en-US", {
+        timeZone: "America/New_York",
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
 
     async function syncWithServer() {
       // If server injected a timestamp into HTML, don’t call /api/time from browser
       if (INITIAL?.serverNowMs) {
         serverOffset = INITIAL.serverNowMs - Date.now();
-        const estDate = new Date(Date.now() + serverOffset);
-        dateStr = estDate.toLocaleDateString("en-US", {
-          timeZone: "America/New_York",
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        });
+        dateStr = formatDateStr(Date.now() + serverOffset);
         return;
       }
 
       try {
+        const before = Date.now();
         const res = await fetch(apiUrl("/api/time"));
-        const afterFetch = Date.now();
         const data = await res.json();
+        const after = Date.now();
 
-        // Simple offset calculation - server timestamp vs local time
-        serverOffset = data.timestamp - afterFetch;
-        dateStr = data.dateStr;
+        // Use midpoint to reduce RTT bias
+        const midpoint = Math.floor((before + after) / 2);
+        serverOffset = data.timestamp - midpoint;
+        dateStr = data.dateStr || formatDateStr(Date.now() + serverOffset);
       } catch {
         serverOffset = 0;
-        const now = new Date();
-        dateStr = now.toLocaleDateString("en-US", {
-          timeZone: "America/New_York",
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        });
+        dateStr = formatDateStr(Date.now());
       }
     }
 
     function updateDisplay() {
-      // Get current EST time using local clock + offset
-      const now = new Date(Date.now() + serverOffset);
-      const estString = now.toLocaleString("en-US", {
+      const nowMs = Date.now() + serverOffset;
+
+      // Get NY time components reliably
+      const ny = new Date(nowMs);
+      const parts = new Intl.DateTimeFormat("en-US", {
         timeZone: "America/New_York",
         hour12: false,
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
-      });
-      const [hours, minutes] = estString.split(":").map(Number);
+      })
+        .formatToParts(ny)
+        .reduce((acc, p) => {
+          if (p.type !== "literal") acc[p.type] = p.value;
+          return acc;
+        }, {});
+
+      const hours = Number(parts.hour);
+      const minutes = Number(parts.minute);
+      const seconds = Number(parts.second);
 
       const displayHour = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
       const period = hours >= 12 ? "PM" : "AM";
 
-      // Update dateStr at midnight or if not set
-      if (!dateStr || (hours === 0 && minutes === 0)) {
-        const estDate = new Date(Date.now() + serverOffset);
-        dateStr = estDate.toLocaleDateString("en-US", {
-          timeZone: "America/New_York",
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        });
+      // Update dateStr at midnight (NY time) or if not set
+      if (!dateStr || (hours === 0 && minutes === 0 && seconds === 0)) {
+        dateStr = formatDateStr(nowMs);
       }
 
       setCurrentTime({
         hour: hours,
         minute: minutes,
-        display: `${displayHour}:${minutes.toString().padStart(2, "0")} ${period} EST, ${dateStr}`,
+        display: `${displayHour}:${String(minutes).padStart(2, "0")} ${period} EST, ${dateStr}`,
       });
     }
 
-    // Initial sync then update
-    syncWithServer().then(updateDisplay);
+    let displayInterval = null;
+    let syncInterval = null;
 
-    // Update display every 200ms for smoother minute transitions
-    const displayInterval = setInterval(updateDisplay, 20);
+    // Initial sync then start ticking
+    (async () => {
+      await syncWithServer();
+      updateDisplay();
 
-    // Re-sync with server every 5 minutes (only if we *need* to call /api/time)
-    const syncInterval = INITIAL?.serverNowMs
-      ? null
-      : setInterval(syncWithServer, 5 * 60 * 1000);
+      // Tick once per second (smooth enough, avoids insane re-renders)
+      displayInterval = setInterval(updateDisplay, 1000);
+
+      // Re-sync every 5 minutes ONLY if we needed /api/time
+      if (!INITIAL?.serverNowMs) {
+        syncInterval = setInterval(
+          async () => {
+            await syncWithServer();
+          },
+          5 * 60 * 1000,
+        );
+      }
+    })();
 
     return () => {
-      clearInterval(displayInterval);
+      if (displayInterval) clearInterval(displayInterval);
       if (syncInterval) clearInterval(syncInterval);
     };
   }, []);
