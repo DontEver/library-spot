@@ -1,0 +1,17 @@
+{
+  "name": "library-spot-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "LibrarySpot API server with LibCal scraper",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "puppeteer": "^21.0.0",
+	"express-rate-limit": "^7.5.0"
+  }
+}
