@@ -1,11 +1,13 @@
+name: libraryspot
+
 services:
   library:
-    container_name: library
+    container_name: ${CONTAINER_NAME:-library}
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "${HOST_PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
