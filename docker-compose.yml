@@ -1,6 +1,6 @@
 services:
-  library:
-    container_name: dev_library
+  library-dev:
+    container_name: library-dev
     build:
       context: .
       dockerfile: Dockerfile
