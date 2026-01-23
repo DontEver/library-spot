@@ -177,7 +177,7 @@ NODE_ENV=production    # Serve built frontend from dist/ (Docker/prod-style)
 
 Run as a single container that builds the frontend and serves it via the backend.
 
-Create `docker-compose.dev.yml`:
+Create `docker-compose.yml`:
 
 ```yaml
 services:
@@ -187,7 +187,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3100:3000"
+      - "3000:3000"
     environment:
       - NODE_ENV=production
     restart: unless-stopped
@@ -202,14 +202,14 @@ docker compose -f docker-compose.dev.yml up -d --build
 Verify:
 
 ```bash
-curl -I http://127.0.0.1:3100
-curl http://127.0.0.1:3100/api/health
+curl -I http://127.0.0.1:3001
+curl http://127.0.0.1:3001/api/health
 ```
 
 Open:
 
 ```
-http://<YOUR_HOST>:3100
+http://<YOUR_HOST>:3001
 ```
 
 ## 🤝 Contributing
