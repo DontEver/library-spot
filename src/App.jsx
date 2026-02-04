@@ -1147,6 +1147,30 @@ function LibrarySection({
           {/* Show HSL weekly hours for HSL library */}
           {isHSL && <HslHoursDisplay selectedDate={selectedDate} />}
 
+          {/* HSL disclaimer */}
+          {isHSL && (
+            <div className="bg-amber-600/10 border border-amber-600/30 rounded-lg p-3 mb-3 text-xs text-amber-400/80">
+              <p>
+                <strong>Note:</strong> HSL data updates every 60 minutes. For real-time availability, visit{" "}
+                <a 
+                  href="https://hsl-osu.libcal.com/spaces?lid=694&gid=24674" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline hover:text-amber-300"
+                >
+                  HSL's booking page
+                </a>
+                . Want faster updates? Email{" "}
+                <a 
+                  href="mailto:xinci@xinci.me" 
+                  className="underline hover:text-amber-300"
+                >
+                  xinci@xinci.me
+                </a>
+              </p>
+            </div>
+          )}
+
           {/* Show operating hours for non-HSL */}
           {!isHSL && (
             <div className="text-xs text-slate-500 mb-3">
