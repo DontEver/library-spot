@@ -142,6 +142,10 @@ let dataCache = {};
 const inFlight = new Map();
 const CACHE_TTL = 60 * 1000; // 1 minute
 
+// Separate cache for HSL (keyed by date) - refreshes less frequently
+let hslCache = {};
+const HSL_CACHE_TTL = 60 * 60 * 1000; // 60 minutes
+
 /**
  * Get date string in UTC format for OSU API
  * Uses America/New_York timezone which automatically handles EST/EDT
@@ -751,19 +755,18 @@ async function getAllLibraryData(dateStr = null, { force = false } = {}) {
     console.log(`Fetching fresh data for ${cacheKey}...`);
     const startedAt = Date.now();
 
-    const results = await Promise.all(
-      LIBRARIES.map(async (library) => {
-        // Check if it's an OSU API library or LibCal (HSL)
-        if (library.type === "osu-api") {
-          return await fetchOsuApi(library, dateStr);
-        } else if (library.type === "libcal") {
-          return await scrapeLibCal(library, dateStr);
-        }
-        return library;
+    // Fetch OSU API libraries
+    const apiResults = await Promise.all(
+      LIBRARIES.filter(lib => lib.type === "osu-api").map(async (library) => {
+        return await fetchOsuApi(library, dateStr);
       }),
     );
 
-    const finishedAt = Date.now(); // IMPORTANT: set lastUpdated AFTER fetch completes
+    // Get HSL from its own cache (or fetch if stale/missing)
+    const hslData = await getHslData(dateStr);
+    const results = [...apiResults, hslData];
+
+    const finishedAt = Date.now();
 
     dataCache[cacheKey] = {
       lastUpdated: finishedAt,
@@ -785,6 +788,34 @@ async function getAllLibraryData(dateStr = null, { force = false } = {}) {
   } finally {
     inFlight.delete(cacheKey);
   }
+}
+
+/**
+ * Get HSL data - uses separate 30-minute cache
+ */
+async function getHslData(dateStr = null) {
+  const cacheKey = dateStr || "today";
+  const now = Date.now();
+  
+  const entry = hslCache[cacheKey];
+  const isFresh = entry?.data && entry?.lastUpdated && now - entry.lastUpdated < HSL_CACHE_TTL;
+  
+  if (isFresh) {
+    console.log(`Using cached HSL data for ${cacheKey}`);
+    return entry.data;
+  }
+  
+  // Fetch fresh HSL data
+  console.log(`🏥 Fetching fresh HSL data for ${cacheKey}...`);
+  const hslLibrary = LIBRARIES.find(lib => lib.id === "hsl");
+  const result = await scrapeLibCal(hslLibrary, dateStr);
+  
+  hslCache[cacheKey] = {
+    lastUpdated: Date.now(),
+    data: result,
+  };
+  
+  return result;
 }
 
 // ------------------------------
