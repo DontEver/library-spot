@@ -142,10 +142,6 @@ let dataCache = {};
 const inFlight = new Map();
 const CACHE_TTL = 60 * 1000; // 1 minute
 
-// Separate cache for HSL (keyed by date) - refreshes less frequently
-let hslCache = {};
-const HSL_CACHE_TTL = 60 * 60 * 1000; // 60 minutes
-
 /**
  * Get date string in UTC format for OSU API
  * Uses America/New_York timezone which automatically handles EST/EDT
@@ -755,18 +751,19 @@ async function getAllLibraryData(dateStr = null, { force = false } = {}) {
     console.log(`Fetching fresh data for ${cacheKey}...`);
     const startedAt = Date.now();
 
-    // Fetch OSU API libraries
-    const apiResults = await Promise.all(
-      LIBRARIES.filter(lib => lib.type === "osu-api").map(async (library) => {
-        return await fetchOsuApi(library, dateStr);
+    const results = await Promise.all(
+      LIBRARIES.map(async (library) => {
+        // Check if it's an OSU API library or LibCal (HSL)
+        if (library.type === "osu-api") {
+          return await fetchOsuApi(library, dateStr);
+        } else if (library.type === "libcal") {
+          return await scrapeLibCal(library, dateStr);
+        }
+        return library;
       }),
     );
 
-    // Get HSL from its own cache (or fetch if stale/missing)
-    const hslData = await getHslData(dateStr);
-    const results = [...apiResults, hslData];
-
-    const finishedAt = Date.now();
+    const finishedAt = Date.now(); // IMPORTANT: set lastUpdated AFTER fetch completes
 
     dataCache[cacheKey] = {
       lastUpdated: finishedAt,
@@ -788,34 +785,6 @@ async function getAllLibraryData(dateStr = null, { force = false } = {}) {
   } finally {
     inFlight.delete(cacheKey);
   }
-}
-
-/**
- * Get HSL data - uses separate 30-minute cache
- */
-async function getHslData(dateStr = null) {
-  const cacheKey = dateStr || "today";
-  const now = Date.now();
-  
-  const entry = hslCache[cacheKey];
-  const isFresh = entry?.data && entry?.lastUpdated && now - entry.lastUpdated < HSL_CACHE_TTL;
-  
-  if (isFresh) {
-    console.log(`Using cached HSL data for ${cacheKey}`);
-    return entry.data;
-  }
-  
-  // Fetch fresh HSL data
-  console.log(`🏥 Fetching fresh HSL data for ${cacheKey}...`);
-  const hslLibrary = LIBRARIES.find(lib => lib.id === "hsl");
-  const result = await scrapeLibCal(hslLibrary, dateStr);
-  
-  hslCache[cacheKey] = {
-    lastUpdated: Date.now(),
-    data: result,
-  };
-  
-  return result;
 }
 
 // ------------------------------
@@ -967,29 +936,32 @@ app.get("/api/health", (req, res) => {
 // ------------------------------
 // Background refresh (keeps cache hot even with 0 visitors)
 // ------------------------------
-const BACKGROUND_REFRESH_MS = Number(process.env.BACKGROUND_REFRESH_MS || 60_000);
+const BACKGROUND_REFRESH_MS = Number(process.env.BACKGROUND_REFRESH_MS || 3 * 60_000); // 3 minutes
+const BACKGROUND_REFRESH_STAGGER_MS = Number(process.env.BACKGROUND_REFRESH_STAGGER_MS || 500); // 500ms between days
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let backgroundInFlight = null;
 
 async function refreshAllDaysInBackground() {
-  // prevent overlapping runs if one minute overlaps the next
+  // prevent overlapping runs
   if (backgroundInFlight) return backgroundInFlight;
 
   backgroundInFlight = (async () => {
     try {
       const dayStrs = getNext8DaysNY();
-      console.log(`🔄 Background refresh: ${dayStrs.join(", ")}`);
+      console.log(`🔄 Background refresh (staggered): ${dayStrs.join(", ")}`);
 
-      await Promise.all(
-        dayStrs.map(async (dateStr) => {
-          try {
-            // Force refresh so it updates even if TTL hasn't expired
-            await getAllLibraryData(dateStr, { force: true });
-          } catch (e) {
-            console.warn(`⚠️ Background refresh failed for ${dateStr}:`, e?.message || e);
-          }
-        }),
-      );
+      // Fetch one day at a time with a short pause between each,
+      // so we don't burst all 8 days x 4 libraries simultaneously.
+      for (const dateStr of dayStrs) {
+        try {
+          await getAllLibraryData(dateStr, { force: true });
+        } catch (e) {
+          console.warn(`⚠️ Background refresh failed for ${dateStr}:`, e?.message || e);
+        }
+        await sleep(BACKGROUND_REFRESH_STAGGER_MS);
+      }
 
       // Invalidate the cached HTML so the next visitor gets freshly injected data
       cachedBootstrapHtml = null;
@@ -1002,7 +974,7 @@ async function refreshAllDaysInBackground() {
   return backgroundInFlight;
 }
 
-// warm immediately on boot, then every minute
+// warm immediately on boot, then every 3 minutes
 refreshAllDaysInBackground();
 setInterval(refreshAllDaysInBackground, BACKGROUND_REFRESH_MS);
 
