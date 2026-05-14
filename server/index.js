@@ -83,8 +83,8 @@ const LIBCAL_HOURS_CONFIG = {
   },
   faes: {
     lid: 16298,
-    buildingRowName: "FAES Library & Student Success Center",
-    reservationRowName: "FAES Library & Student Success Center", // Same row for both
+    buildingRowName: "FAES Library &amp; Student Success Center",
+    reservationRowName: "FAES Library &amp; Student Success Center", // Same row for both
   },
 };
 
