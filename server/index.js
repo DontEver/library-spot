@@ -43,7 +43,7 @@ app.use(
 
 const BOOTSTRAP_TTL = 60 * 1000; // 1 minute
 
-app.set("trust proxy", true);
+app.set("trust proxy", 1); // Trust one hop (Cloudflare)
 
 let indexHtmlTemplate = null;
 
@@ -83,8 +83,8 @@ const LIBCAL_HOURS_CONFIG = {
   },
   faes: {
     lid: 16298,
-    buildingRowName: "FAES Library",
-    reservationRowName: "FAES Library", // Same row for both
+    buildingRowName: "FAES Library & Student Success Center",
+    reservationRowName: "FAES Library & Student Success Center", // Same row for both
   },
 };
 
@@ -241,8 +241,8 @@ function parseRowHours(html, rowName, mondayDate) {
   for (const rowMatch of allRows) {
     const rowContent = rowMatch[1];
     // Get first td content
-    const firstTdMatch = rowContent.match(/<td[^>]*>([\s\S]*?)<\/td>/i);
-    if (firstTdMatch && firstTdMatch[1].includes(rowName)) {
+    const firstCellMatch = rowContent.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/i);
+    if (firstCellMatch && firstCellMatch[1].includes(rowName)) {
       targetRow = rowMatch[0];
       break;
     }
@@ -936,8 +936,12 @@ app.get("/api/health", (req, res) => {
 // ------------------------------
 // Background refresh (keeps cache hot even with 0 visitors)
 // ------------------------------
-const BACKGROUND_REFRESH_MS = Number(process.env.BACKGROUND_REFRESH_MS || 3 * 60_000); // 3 minutes
-const BACKGROUND_REFRESH_STAGGER_MS = Number(process.env.BACKGROUND_REFRESH_STAGGER_MS || 500); // 500ms between days
+const BACKGROUND_REFRESH_MS = Number(
+  process.env.BACKGROUND_REFRESH_MS || 3 * 60_000,
+); // 3 minutes
+const BACKGROUND_REFRESH_STAGGER_MS = Number(
+  process.env.BACKGROUND_REFRESH_STAGGER_MS || 500,
+); // 500ms between days
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -958,7 +962,10 @@ async function refreshAllDaysInBackground() {
         try {
           await getAllLibraryData(dateStr, { force: true });
         } catch (e) {
-          console.warn(`⚠️ Background refresh failed for ${dateStr}:`, e?.message || e);
+          console.warn(
+            `⚠️ Background refresh failed for ${dateStr}:`,
+            e?.message || e,
+          );
         }
         await sleep(BACKGROUND_REFRESH_STAGGER_MS);
       }
@@ -977,7 +984,6 @@ async function refreshAllDaysInBackground() {
 // warm immediately on boot, then every 3 minutes
 refreshAllDaysInBackground();
 setInterval(refreshAllDaysInBackground, BACKGROUND_REFRESH_MS);
-
 
 // Start server
 app.listen(PORT, () => {
