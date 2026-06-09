@@ -140,7 +140,34 @@ const LIBRARIES = [
 // Cache for data (keyed by date)
 let dataCache = {};
 const inFlight = new Map();
-const CACHE_TTL = 60 * 1000; // 1 minute
+const CACHE_TTL = Number(process.env.CACHE_TTL_MS || 5 * 60 * 1000); // 5 minutes
+
+// Puppeteer/Chromium guardrails. HSL is the only Puppeteer-backed source,
+// so keep it serialized by default. This prevents "Target closed" / zombie
+// storms when the page route, API refresh, and background warmer overlap.
+const PUPPETEER_SCRAPE_TIMEOUT_MS = Number(
+  process.env.PUPPETEER_SCRAPE_TIMEOUT_MS || 30_000,
+);
+let libCalScrapeQueue = Promise.resolve();
+const activeBrowsers = new Set();
+
+function runLibCalScrapeQueued(task) {
+  const run = libCalScrapeQueue.catch(() => {}).then(task);
+
+  // Keep the queue alive even if one scrape fails.
+  libCalScrapeQueue = run.catch(() => {});
+  return run;
+}
+
+function fallbackLibraryData(library, error) {
+  return {
+    ...library,
+    rooms: [],
+    scrapedAt: new Date().toISOString(),
+    isLive: false,
+    error: error?.message || String(error || "Unknown error"),
+  };
+}
 
 /**
  * Get date string in UTC format for OSU API
@@ -578,28 +605,39 @@ async function fetchOsuApi(library, dateStr = null) {
  * @param {string} dateStr - Date in format YYYY-MM-DD (optional, defaults to today)
  */
 async function scrapeLibCal(library, dateStr = null) {
+  return runLibCalScrapeQueued(() => scrapeLibCalNow(library, dateStr));
+}
+
+async function scrapeLibCalNow(library, dateStr = null) {
   let puppeteer;
   try {
     puppeteer = await import("puppeteer");
   } catch (e) {
     console.log("Puppeteer not installed. Skipping HSL.");
-    return {
-      ...library,
-      rooms: [],
-      scrapedAt: new Date().toISOString(),
-      error: "Puppeteer not installed",
-    };
+    return fallbackLibraryData(library, new Error("Puppeteer not installed"));
   }
 
-  const browser = await puppeteer.default.launch({
-    headless: "new",
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  let browser = null;
+  let page = null;
 
   try {
-    const page = await browser.newPage();
-    page.setDefaultTimeout(30000);
+    browser = await puppeteer.default.launch({
+      headless: "new",
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-extensions",
+        "--disable-background-networking",
+      ],
+    });
+    activeBrowsers.add(browser);
+
+    page = await browser.newPage();
+    page.setDefaultTimeout(PUPPETEER_SCRAPE_TIMEOUT_MS);
+    page.setDefaultNavigationTimeout(PUPPETEER_SCRAPE_TIMEOUT_MS);
 
     // Add date parameter to URL if provided
     let url = library.libcalUrl;
@@ -607,12 +645,12 @@ async function scrapeLibCal(library, dateStr = null) {
       url += `&date=${dateStr}`;
     }
 
-    await page.goto(url, { waitUntil: "networkidle2" });
-    await page.waitForSelector(".fc-timeline-event", { timeout: 15000 });
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Use the target date for filtering
-    const targetDate = dateStr ? new Date(dateStr + "T12:00:00") : new Date();
+    await page.goto(url, {
+      waitUntil: "domcontentloaded",
+      timeout: PUPPETEER_SCRAPE_TIMEOUT_MS,
+    });
+    await page.waitForSelector(".fc-timeline-event", { timeout: 15_000 });
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     const data = await page.evaluate((targetDateStr) => {
       const slots = document.querySelectorAll(".fc-timeline-event");
@@ -713,18 +751,21 @@ async function scrapeLibCal(library, dateStr = null) {
       isLive: true,
     };
   } catch (error) {
-    console.error(`Error scraping HSL:`, error.message);
-    return {
-      ...library,
-      rooms: [],
-      scrapedAt: new Date().toISOString(),
-      error: error.message,
-    };
+    console.error(`Error scraping HSL:`, error?.message || error);
+    return fallbackLibraryData(library, error);
   } finally {
-    await browser.close();
+    if (page) {
+      await page.close().catch(() => {});
+    }
+
+    if (browser) {
+      activeBrowsers.delete(browser);
+      await browser.close().catch((error) => {
+        console.warn("Failed to close Chromium cleanly:", error?.message || error);
+      });
+    }
   }
 }
-
 /**
  * Fetch all library data
  * @param {string} dateStr - Date in format YYYY-MM-DD (optional)
@@ -751,17 +792,22 @@ async function getAllLibraryData(dateStr = null, { force = false } = {}) {
     console.log(`Fetching fresh data for ${cacheKey}...`);
     const startedAt = Date.now();
 
-    const results = await Promise.all(
-      LIBRARIES.map(async (library) => {
+    const results = [];
+    for (const library of LIBRARIES) {
+      try {
         // Check if it's an OSU API library or LibCal (HSL)
         if (library.type === "osu-api") {
-          return await fetchOsuApi(library, dateStr);
+          results.push(await fetchOsuApi(library, dateStr));
         } else if (library.type === "libcal") {
-          return await scrapeLibCal(library, dateStr);
+          results.push(await scrapeLibCal(library, dateStr));
+        } else {
+          results.push(library);
         }
-        return library;
-      }),
-    );
+      } catch (error) {
+        console.error(`Error fetching ${library.id}:`, error?.message || error);
+        results.push(fallbackLibraryData(library, error));
+      }
+    }
 
     const finishedAt = Date.now(); // IMPORTANT: set lastUpdated AFTER fetch completes
 
@@ -841,19 +887,30 @@ async function renderIndexWithBootstrap(req, res) {
 
     const dayStrs = getNext8DaysNY();
 
-    const entries = await Promise.all(
-      dayStrs.map(async (dateStr) => {
-        const result = await getAllLibraryData(dateStr); // already TTL + inFlight protected :contentReference[oaicite:3]{index=3}
-        return [
+    const entries = [];
+    for (const dateStr of dayStrs) {
+      try {
+        const result = await getAllLibraryData(dateStr);
+        entries.push([
           dateStr,
           {
             data: result.data,
             fetchedAt: result.fetchedAt,
           },
-        ];
-      }),
-    );
-
+        ]);
+      } catch (error) {
+        console.error(`Bootstrap fetch failed for ${dateStr}:`, error?.message || error);
+        const stale = dataCache[dateStr];
+        entries.push([
+          dateStr,
+          {
+            data: stale?.data || LIBRARIES.map((library) => fallbackLibraryData(library, error)),
+            fetchedAt: stale?.lastUpdated || Date.now(),
+            error: error?.message || String(error),
+          },
+        ]);
+      }
+    }
     const payload = {
       serverNowMs: Date.now(),
       libraryCache: Object.fromEntries(entries),
@@ -937,11 +994,11 @@ app.get("/api/health", (req, res) => {
 // Background refresh (keeps cache hot even with 0 visitors)
 // ------------------------------
 const BACKGROUND_REFRESH_MS = Number(
-  process.env.BACKGROUND_REFRESH_MS || 3 * 60_000,
-); // 3 minutes
+  process.env.BACKGROUND_REFRESH_MS || 15 * 60_000,
+); // 15 minutes
 const BACKGROUND_REFRESH_STAGGER_MS = Number(
-  process.env.BACKGROUND_REFRESH_STAGGER_MS || 500,
-); // 500ms between days
+  process.env.BACKGROUND_REFRESH_STAGGER_MS || 1000,
+); // 1s between days
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -981,12 +1038,12 @@ async function refreshAllDaysInBackground() {
   return backgroundInFlight;
 }
 
-// warm immediately on boot, then every 3 minutes
+// warm immediately on boot, then on the configured interval
 refreshAllDaysInBackground();
 setInterval(refreshAllDaysInBackground, BACKGROUND_REFRESH_MS);
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🏛️  LibrarySpot running on http://localhost:${PORT}`);
   console.log(`📊 Libraries: 18th Avenue, Thompson, FAES, Health Sciences`);
   console.log(
@@ -997,5 +1054,29 @@ app.listen(PORT, () => {
   console.log(`   POST /api/refresh       - Force refresh cache`);
   console.log(`   GET  /api/health        - Health check`);
 });
+
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received. Closing server and Chromium processes...`);
+
+  server.close(async () => {
+    await Promise.all(
+      [...activeBrowsers].map((browser) =>
+        browser.close().catch((error) => {
+          console.warn("Failed to close Chromium during shutdown:", error?.message || error);
+        }),
+      ),
+    );
+    process.exit(0);
+  });
+
+  // Do not hang forever if an HTTP connection or Chromium process is wedged.
+  setTimeout(() => process.exit(1), 10_000).unref();
+}
+
+process.once("SIGTERM", () => shutdown("SIGTERM"));
+process.once("SIGINT", () => shutdown("SIGINT"));
 
 export default app;
