@@ -3,6 +3,8 @@ name: libraryspot
 services:
   library:
     container_name: ${CONTAINER_NAME:-library}
+    init: true
+    pids_limit: 512
     build:
       context: .
       dockerfile: Dockerfile
