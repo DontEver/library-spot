@@ -280,14 +280,16 @@ function parseRowHours(html, rowName, mondayDate) {
     return null;
   }
 
-  // Extract all td cells from the target row
+  // Extract all td cells from the target row. The row label ("18th Avenue
+  // Library", "18th Group Study Rooms", etc.) lives in a <th>, not a <td> -
+  // LibCal's grid markup uses <th scope="row"> for it - so every <td> here
+  // is already a day cell, all 7 of them (Mon-Sun), none to skip.
   const tdMatches = [...targetRow.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
 
-  // Skip first td (label), process next 7 (Mon-Sun)
-  for (let i = 1; i <= 7 && i < tdMatches.length; i++) {
+  for (let i = 0; i < 7 && i < tdMatches.length; i++) {
     const cellContent = tdMatches[i][1];
     const mondayDateObj = new Date(mondayDate + "T12:00:00");
-    mondayDateObj.setDate(mondayDateObj.getDate() + (i - 1));
+    mondayDateObj.setDate(mondayDateObj.getDate() + i);
     const dayDateStr = mondayDateObj.toISOString().split("T")[0];
 
     if (cellContent.includes("s-lc-closed")) {
@@ -432,11 +434,20 @@ async function fetchLibCalHours(libraryId, dateStr) {
       };
     }
 
-    // Cache the result
-    hoursCache[cacheKey] = {
-      lastUpdated: Date.now(),
-      data: result,
-    };
+    // Only cache a result that actually has data - a transient LibCal
+    // hiccup or row-name mismatch produces an empty `result` ({}), and
+    // caching that for the full TTL would silently poison the hours
+    // display (fall back to the static estimate) for up to an hour with no
+    // retry. Skipping the cache write here means the next request just
+    // tries the fetch again instead of serving a known-bad empty result.
+    if (allDates.size > 0) {
+      hoursCache[cacheKey] = {
+        lastUpdated: Date.now(),
+        data: result,
+      };
+    } else {
+      console.warn(`No hours data parsed for ${libraryId} week of ${mondayDate} - not caching, will retry next request`);
+    }
 
     return result;
   } catch (error) {
