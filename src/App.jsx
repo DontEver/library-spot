@@ -443,6 +443,7 @@ function TimeFilter({
   onStartChange,
   onEndChange,
   onClear,
+  disabled,
 }) {
   // All end times after start (no max limit)
   const validEndOptions = TIME_OPTIONS.filter(
@@ -458,7 +459,8 @@ function TimeFilter({
           onChange={(e) =>
             onStartChange(e.target.value ? parseInt(e.target.value) : null)
           }
-          className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent-ring)]"
+          disabled={disabled}
+          className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">Any</option>
           {TIME_OPTIONS.map((opt) => (
@@ -476,7 +478,7 @@ function TimeFilter({
           onChange={(e) =>
             onEndChange(e.target.value ? parseInt(e.target.value) : null)
           }
-          disabled={startTime === null}
+          disabled={disabled || startTime === null}
           className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">Any</option>
@@ -502,6 +504,12 @@ function TimeFilter({
           ({(endTime - startTime) / 60}h block)
         </span>
       )}
+
+      {disabled && (
+        <span className="text-xs text-[var(--text-muted)] italic">
+          Clear the duration filter below to use this instead
+        </span>
+      )}
     </div>
   );
 }
@@ -522,7 +530,7 @@ const DURATION_OPTIONS = [
   { value: 480, label: "8 hours" },
 ];
 
-function DurationFilter({ duration, onDurationChange, onClear }) {
+function DurationFilter({ duration, onDurationChange, onClear, disabled }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-2">
@@ -534,7 +542,8 @@ function DurationFilter({ duration, onDurationChange, onClear }) {
           onChange={(e) =>
             onDurationChange(e.target.value ? parseInt(e.target.value) : null)
           }
-          className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent-ring)]"
+          disabled={disabled}
+          className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">Any</option>
           {DURATION_OPTIONS.map((opt) => (
@@ -544,6 +553,12 @@ function DurationFilter({ duration, onDurationChange, onClear }) {
           ))}
         </select>
       </div>
+
+      {disabled && (
+        <span className="text-xs text-[var(--text-muted)] italic">
+          Clear the time-block filter above to use this instead
+        </span>
+      )}
 
       {duration !== null && (
         <button
@@ -1276,6 +1291,17 @@ export default function App() {
   const [timeFilter, setTimeFilter] = useState({ start: null, end: null });
   const [durationFilter, setDurationFilter] = useState(null); // Minimum consecutive free minutes
   const [libraryFilter, setLibraryFilter] = useState(DEFAULT_LIBRARY_FILTER);
+  // Closed by default so the page opens on results, not a control panel.
+  // The "N active" badge on the toggle (below) is what keeps this honest -
+  // collapsing the section can never silently hide an active filter.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount =
+    (timeFilter.start !== null ? 1 : 0) +
+    (durationFilter !== null ? 1 : 0) +
+    (libraryFilter.length !== DEFAULT_LIBRARY_FILTER.length ||
+    !libraryFilter.every((id) => DEFAULT_LIBRARY_FILTER.includes(id))
+      ? 1
+      : 0);
 
   const isToday = selectedDate === days[0].dateStr;
 
@@ -1576,9 +1602,13 @@ export default function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* Date Picker */}
-        <div className="mb-4">
-          <p className="text-sm text-[var(--text-muted)] mb-2">Select Date</p>
+        {/* Date Picker - the one decision every visit needs, so it's the
+            only filter-family control that isn't behind the disclosure
+            below. Everything else is secondary/optional narrowing. */}
+        <div className="mb-3">
+          <p className="text-sm font-semibold text-[var(--text)] mb-2">
+            Select Date
+          </p>
           <DatePicker
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
@@ -1586,49 +1616,82 @@ export default function App() {
           />
         </div>
 
-        {/* Time Range Filter - Find rooms with entire block free */}
-        <div className="mb-4">
-          <p className="text-sm text-[var(--text-muted)] mb-2">
-            Find Rooms Free for Entire Time Block
-          </p>
-          <TimeFilter
-            startTime={timeFilter.start}
-            endTime={timeFilter.end}
-            onStartChange={(start) =>
-              setTimeFilter((prev) => ({
-                start,
-                end:
-                  start === null
-                    ? null
-                    : prev.end && prev.end <= start
-                      ? null
-                      : prev.end,
-              }))
-            }
-            onEndChange={(end) => setTimeFilter((prev) => ({ ...prev, end }))}
-            onClear={() => setTimeFilter({ start: null, end: null })}
-          />
-        </div>
-
-        {/* Duration Filter - Find rooms with X consecutive free slots */}
-        <div className="mb-4">
-          <p className="text-sm text-[var(--text-muted)] mb-2">
-            Or Find Rooms with Consecutive Free Time
-          </p>
-          <DurationFilter
-            duration={durationFilter}
-            onDurationChange={setDurationFilter}
-            onClear={() => setDurationFilter(null)}
-          />
-        </div>
-
-        {/* Library Filter */}
+        {/* Time, Duration, and Library filters are all optional narrowing on
+            top of the date - collapsed by default so the page opens on
+            results, not a control panel. The toggle's own label always
+            shows how many are active, so switching it closed never hides
+            the fact that a filter is still applied. */}
         <div className="mb-6">
-          <p className="text-sm text-[var(--text-muted)] mb-2">Show Libraries</p>
-          <LibraryFilter
-            selectedLibraries={libraryFilter}
-            onToggle={toggleLibraryFilter}
-          />
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-expanded={filtersOpen}
+            className="flex items-center gap-2 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] py-1"
+          >
+            <span
+              className={`transition-transform ${filtersOpen ? "rotate-90" : ""}`}
+            >
+              ▶
+            </span>
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent-bg)] text-[var(--accent)] text-xs font-semibold">
+                {activeFilterCount} active
+              </span>
+            )}
+          </button>
+
+          {filtersOpen && (
+            <div className="mt-3 flex flex-col gap-4 pl-1 border-l-2 border-[var(--border)] ml-1">
+              <div className="pl-4">
+                <p className="text-sm text-[var(--text-muted)] mb-2">
+                  Find Rooms Free for Entire Time Block
+                </p>
+                <TimeFilter
+                  startTime={timeFilter.start}
+                  endTime={timeFilter.end}
+                  onStartChange={(start) =>
+                    setTimeFilter((prev) => ({
+                      start,
+                      end:
+                        start === null
+                          ? null
+                          : prev.end && prev.end <= start
+                            ? null
+                            : prev.end,
+                    }))
+                  }
+                  onEndChange={(end) =>
+                    setTimeFilter((prev) => ({ ...prev, end }))
+                  }
+                  onClear={() => setTimeFilter({ start: null, end: null })}
+                  disabled={durationFilter !== null}
+                />
+              </div>
+
+              <div className="pl-4">
+                <p className="text-sm text-[var(--text-muted)] mb-2">
+                  Or Find Rooms with Consecutive Free Time
+                </p>
+                <DurationFilter
+                  duration={durationFilter}
+                  onDurationChange={setDurationFilter}
+                  onClear={() => setDurationFilter(null)}
+                  disabled={timeFilter.start !== null}
+                />
+              </div>
+
+              <div className="pl-4">
+                <p className="text-sm text-[var(--text-muted)] mb-2">
+                  Show Libraries
+                </p>
+                <LibraryFilter
+                  selectedLibraries={libraryFilter}
+                  onToggle={toggleLibraryFilter}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* API Status Banner */}
