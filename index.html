@@ -5,6 +5,18 @@
     <link rel="icon" ... />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LibrarySpot</title>
+    <script>
+      // Applied before first paint so a saved theme choice doesn't flash the
+      // other theme for a frame - matches library-reservation's own approach.
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          if (saved === 'light' || saved === 'dark') {
+            document.documentElement.setAttribute('data-theme', saved);
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
