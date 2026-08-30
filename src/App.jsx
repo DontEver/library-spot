@@ -1,5 +1,142 @@
 import React, { useState, useEffect, useMemo } from "react";
 
+// One coherent icon set (20x20, 1.75 stroke, round caps, currentColor)
+// replacing emoji used as icons throughout the app - same stroke weight and
+// optical size everywhere instead of mixed platform emoji glyphs.
+const ICON_PROPS = {
+  viewBox: "0 0 20 20",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.75,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+};
+
+function IconBook({ className = "w-5 h-5" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M3 4.5c1.8-.8 3.9-.8 5.5.3v10.7c-1.6-1.1-3.7-1.1-5.5-.3V4.5Z" />
+      <path d="M14.5 4.5c-1.8-.8-3.9-.8-5.5.3v10.7c1.6-1.1 3.7-1.1 5.5-.3V4.5Z" />
+      <path d="M17 5.2c-.5-.2-1-.4-1.5-.5v10.7c.5.1 1 .3 1.5.5" />
+    </svg>
+  );
+}
+
+function IconColumns({ className = "w-5 h-5" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M3 16.5h14" />
+      <path d="M3 6.5 10 3l7 3.5" />
+      <path d="M4.5 8v6.5M8 8v6.5M12 8v6.5M15.5 8v6.5" />
+    </svg>
+  );
+}
+
+function IconLeaf({ className = "w-5 h-5" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M5 15c-2-4.5.5-10.5 10.5-10.5C15.5 14.5 9.5 17 5 15Z" />
+      <path d="M6 14 15 5" />
+    </svg>
+  );
+}
+
+function IconCross({ className = "w-5 h-5" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <rect x="3" y="3" width="14" height="14" rx="3" />
+      <path d="M10 6.5v7M6.5 10h7" />
+    </svg>
+  );
+}
+
+const LIBRARY_ICON_COMPONENTS = {
+  "18th-ave": IconBook,
+  thompson: IconColumns,
+  faes: IconLeaf,
+  hsl: IconCross,
+};
+
+function LibraryIcon({ id, className }) {
+  const Icon = LIBRARY_ICON_COMPONENTS[id] || IconColumns;
+  return <Icon className={className} />;
+}
+
+function IconWhiteboard({ className = "w-4 h-4" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <rect x="2.5" y="4" width="15" height="10" rx="1.5" />
+      <path d="M10 14v2.5M7 18.5h6" />
+    </svg>
+  );
+}
+
+function IconMonitor({ className = "w-4 h-4" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <rect x="2.5" y="3.5" width="15" height="10" rx="1.5" />
+      <path d="M7 17.5h6M10 13.5v4" />
+    </svg>
+  );
+}
+
+function IconVideo({ className = "w-4 h-4" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <rect x="2.5" y="5.5" width="10" height="9" rx="1.5" />
+      <path d="M12.5 9.5 17.5 6.5v7L12.5 10.5" />
+    </svg>
+  );
+}
+
+const AMENITY_ICON_COMPONENTS = {
+  whiteboard: IconWhiteboard,
+  monitor: IconMonitor,
+  "video-conf": IconVideo,
+};
+
+function AmenityIcon({ id, className }) {
+  const Icon = AMENITY_ICON_COMPONENTS[id];
+  return Icon ? <Icon className={className} /> : null;
+}
+
+function IconCheck({ className = "w-4 h-4" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M4.5 10.5 8 14l7.5-8" />
+    </svg>
+  );
+}
+
+function IconChevron({ className = "w-4 h-4" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M7 4.5 13 10l-6 5.5" />
+    </svg>
+  );
+}
+
+function IconWarning({ className = "w-5 h-5" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M10 3 17.5 16h-15L10 3Z" />
+      <path d="M10 8.5v3.5M10 15h.01" />
+    </svg>
+  );
+}
+
+function IconLoading({ className = "w-8 h-8" }) {
+  return (
+    <svg
+      {...ICON_PROPS}
+      strokeWidth={2.25}
+      className={`${className} animate-spin`}
+    >
+      <path d="M10 3a7 7 0 1 0 7 7" />
+    </svg>
+  );
+}
+
 // Use Vite env var if provided, otherwise default to "" (same-origin)
 // This makes production calls go to /api/... (proxied by nginx)
 const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
@@ -133,25 +270,16 @@ const FALLBACK_LIBRARIES = [
   },
 ];
 
-// Library filter options
+// Library filter options - icons come from LIBRARY_ICON_COMPONENTS (top of
+// file), one shared lookup instead of a duplicate id->icon map.
 const LIBRARY_OPTIONS = [
-  { id: "18th-ave", name: "18th Avenue", icon: "📚" },
-  { id: "thompson", name: "Thompson", icon: "🏛️" },
-  { id: "faes", name: "FAES", icon: "🌿" },
-  { id: "hsl", name: "Health Sciences", icon: "🏥" },
+  { id: "18th-ave", name: "18th Avenue" },
+  { id: "thompson", name: "Thompson" },
+  { id: "faes", name: "FAES" },
+  { id: "hsl", name: "Health Sciences" },
 ];
 
-// Library icons mapping
-const LIBRARY_ICONS = {
-  "18th-ave": "📚",
-  thompson: "🏛️",
-  faes: "🌿",
-  hsl: "🏥",
-};
-
 const DEFAULT_LIBRARY_FILTER = ["18th-ave", "thompson", "faes"]; // HSL unchecked by default
-
-const AMENITY_ICONS = { whiteboard: "📝", monitor: "🖥️", "video-conf": "📹" };
 
 // Time options for filter (30-min intervals from 7am to 11:30pm)
 const TIME_OPTIONS = [];
@@ -372,8 +500,8 @@ function HslHoursDisplay({ selectedDate }) {
   }
 
   return (
-    <div className="bg-slate-700/30 rounded-lg p-3 mb-4">
-      <p className="text-xs text-slate-400 mb-2 font-medium">
+    <div className="bg-[var(--surface-row)] rounded-lg p-3 mb-4">
+      <p className="text-xs text-[var(--text-muted)] mb-2 font-medium">
         HSL Hours This Week
       </p>
       <div className="grid grid-cols-7 gap-1">
@@ -382,28 +510,28 @@ function HslHoursDisplay({ selectedDate }) {
             key={day.dateStr}
             className={`text-center p-2 rounded-md transition-all ${
               day.isSelected
-                ? "bg-indigo-600/40 ring-1 ring-indigo-500"
-                : "bg-slate-800/50"
+                ? "bg-[var(--accent-bg)] ring-1 ring-[var(--accent-ring)]"
+                : "bg-[var(--surface)]"
             }`}
           >
             <div
-              className={`text-xs font-medium ${day.isSelected ? "text-indigo-300" : "text-slate-400"}`}
+              className={`text-xs font-medium ${day.isSelected ? "text-[var(--text)]" : "text-[var(--text-muted)]"}`}
             >
               {day.dayName}
             </div>
             <div
-              className={`text-[10px] mt-1 ${day.isSelected ? "text-slate-200" : "text-slate-500"}`}
+              className={`text-[10px] mt-1 ${day.isSelected ? "text-[var(--text)]" : "text-[var(--text-muted)]"}`}
             >
               {day.hours.open}
             </div>
             <div
-              className={`text-[10px] ${day.isSelected ? "text-slate-200" : "text-slate-500"}`}
+              className={`text-[10px] ${day.isSelected ? "text-[var(--text)]" : "text-[var(--text-muted)]"}`}
             >
               {day.hours.close}
             </div>
             {day.hours.note && (
               <div
-                className="text-[9px] text-amber-400 mt-0.5 truncate"
+                className="text-[9px] text-[var(--amber)] mt-0.5 truncate"
                 title={day.hours.note}
               >
                 {day.hours.note}
@@ -423,10 +551,10 @@ function DatePicker({ selectedDate, onDateChange, days }) {
         <button
           key={day.dateStr}
           onClick={() => onDateChange(day.dateStr)}
-          className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
             selectedDate === day.dateStr
-              ? "bg-indigo-600 text-white"
-              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+              ? "bg-[var(--accent-bg)] border-[var(--accent-ring)] text-[var(--text)]"
+              : "bg-[var(--surface)] border-transparent text-[var(--text-muted)] hover:bg-[var(--surface-row)]"
           }`}
         >
           <div>{day.label}</div>
@@ -443,6 +571,7 @@ function TimeFilter({
   onStartChange,
   onEndChange,
   onClear,
+  disabled,
 }) {
   // All end times after start (no max limit)
   const validEndOptions = TIME_OPTIONS.filter(
@@ -452,13 +581,14 @@ function TimeFilter({
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-2">
-        <label className="text-sm text-slate-400">From:</label>
+        <label className="text-sm text-[var(--text-muted)]">From:</label>
         <select
           value={startTime ?? ""}
           onChange={(e) =>
             onStartChange(e.target.value ? parseInt(e.target.value) : null)
           }
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+          disabled={disabled}
+          className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">Any</option>
           {TIME_OPTIONS.map((opt) => (
@@ -470,14 +600,14 @@ function TimeFilter({
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-sm text-slate-400">To:</label>
+        <label className="text-sm text-[var(--text-muted)]">To:</label>
         <select
           value={endTime ?? ""}
           onChange={(e) =>
             onEndChange(e.target.value ? parseInt(e.target.value) : null)
           }
-          disabled={startTime === null}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={disabled || startTime === null}
+          className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">Any</option>
           {validEndOptions.map((opt) => (
@@ -491,15 +621,21 @@ function TimeFilter({
       {(startTime !== null || endTime !== null) && (
         <button
           onClick={onClear}
-          className="text-sm text-slate-400 hover:text-white px-2 py-1"
+          className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] px-2 py-1"
         >
           Clear
         </button>
       )}
 
       {startTime !== null && endTime !== null && (
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-[var(--text-muted)]">
           ({(endTime - startTime) / 60}h block)
+        </span>
+      )}
+
+      {disabled && (
+        <span className="text-xs text-[var(--text-muted)] italic">
+          Clear the duration filter below to use this instead
         </span>
       )}
     </div>
@@ -522,11 +658,11 @@ const DURATION_OPTIONS = [
   { value: 480, label: "8 hours" },
 ];
 
-function DurationFilter({ duration, onDurationChange, onClear }) {
+function DurationFilter({ duration, onDurationChange, onClear, disabled }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-2">
-        <label className="text-sm text-slate-400">
+        <label className="text-sm text-[var(--text-muted)]">
           Minimum consecutive free:
         </label>
         <select
@@ -534,7 +670,8 @@ function DurationFilter({ duration, onDurationChange, onClear }) {
           onChange={(e) =>
             onDurationChange(e.target.value ? parseInt(e.target.value) : null)
           }
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+          disabled={disabled}
+          className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">Any</option>
           {DURATION_OPTIONS.map((opt) => (
@@ -545,10 +682,16 @@ function DurationFilter({ duration, onDurationChange, onClear }) {
         </select>
       </div>
 
+      {disabled && (
+        <span className="text-xs text-[var(--text-muted)] italic">
+          Clear the time-block filter above to use this instead
+        </span>
+      )}
+
       {duration !== null && (
         <button
           onClick={onClear}
-          className="text-sm text-slate-400 hover:text-white px-2 py-1"
+          className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] px-2 py-1"
         >
           Clear
         </button>
@@ -568,13 +711,13 @@ function LibraryFilter({ selectedLibraries, onToggle }) {
             onClick={() => onToggle(lib.id)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
               isSelected
-                ? "bg-indigo-600/20 border-indigo-500 text-white"
-                : "bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
+                ? "bg-[var(--accent-bg)] border-[var(--accent-ring)] text-[var(--text)]"
+                : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent-ring)] hover:text-[var(--text)]"
             }`}
           >
-            <span className="text-base">{lib.icon}</span>
+            <LibraryIcon id={lib.id} className="w-4 h-4" />
             <span className="text-sm font-medium">{lib.name}</span>
-            {isSelected && <span className="text-indigo-400 text-xs">✓</span>}
+            {isSelected && <IconCheck className="w-3.5 h-3.5" />}
           </button>
         );
       })}
@@ -592,12 +735,12 @@ function TimeSlotGrid({
   room,
 }) {
   if (isClosed) {
-    return <p className="text-sm text-slate-500 italic">Closed</p>;
+    return <p className="text-sm text-[var(--text-muted)] italic">Closed</p>;
   }
 
   if (!slots || slots.length === 0) {
     return (
-      <p className="text-sm text-slate-500 italic">No reservations available</p>
+      <p className="text-sm text-[var(--text-muted)] italic">No reservations available</p>
     );
   }
 
@@ -614,7 +757,7 @@ function TimeSlotGrid({
 
     if (blocks.length === 0) {
       return (
-        <p className="text-sm text-slate-500 italic">
+        <p className="text-sm text-[var(--text-muted)] italic">
           No consecutive {durationFilter / 60}h+ blocks available
         </p>
       );
@@ -639,13 +782,13 @@ function TimeSlotGrid({
           return (
             <div
               key={blockIdx}
-              className="bg-emerald-600/20 border border-emerald-500/30 rounded-lg p-2"
+              className="bg-[var(--emerald-bg)] border border-[var(--emerald)] rounded-lg p-2"
             >
               <div className="flex items-center justify-between">
-                <span className="text-emerald-400 font-medium">
+                <span className="text-[var(--emerald)] font-medium">
                   {formatTimeDisplay(startTime)} - {formatTimeDisplay(endTime)}
                 </span>
-                <span className="text-xs text-emerald-300 bg-emerald-600/30 px-2 py-0.5 rounded">
+                <span className="text-xs text-[var(--emerald)] bg-[var(--emerald-bg)] px-2 py-0.5 rounded">
                   {durationStr}
                 </span>
               </div>
@@ -653,7 +796,7 @@ function TimeSlotGrid({
                 {block.map((slot, idx) => (
                   <div
                     key={idx}
-                    className="px-2 py-1 text-xs rounded bg-emerald-600 text-white"
+                    className="px-2 py-1 text-xs rounded bg-[var(--emerald)] text-[var(--text)]"
                   >
                     {formatTimeDisplay(slot.time)}
                   </div>
@@ -692,13 +835,13 @@ function TimeSlotGrid({
   if (filteredSlots.length === 0) {
     if (timeFilter.start !== null || timeFilter.end !== null) {
       return (
-        <p className="text-sm text-slate-500 italic">
+        <p className="text-sm text-[var(--text-muted)] italic">
           No slots in selected time range
         </p>
       );
     }
     return (
-      <p className="text-sm text-slate-500 italic">
+      <p className="text-sm text-[var(--text-muted)] italic">
         {isToday ? "Closed for today" : "No reservations available"}
       </p>
     );
@@ -725,9 +868,9 @@ function TimeSlotGrid({
             className={`px-2 py-1 text-xs rounded ${
               slot.available
                 ? inRange
-                  ? "bg-emerald-500 text-white ring-2 ring-emerald-300"
-                  : "bg-emerald-600 text-white"
-                : "bg-slate-700 text-slate-500"
+                  ? "bg-[var(--emerald)] text-[var(--text)] ring-2 ring-[var(--emerald)]"
+                  : "bg-[var(--emerald)] text-[var(--text)]"
+                : "bg-[var(--surface-row)] text-[var(--text-muted)]"
             }`}
             title={slot.available ? "Available" : "Booked"}
           >
@@ -798,41 +941,41 @@ function RoomCard({
       : [];
 
   return (
-    <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+    <div className="bg-[var(--surface)] rounded-lg p-4 border border-[var(--border)]">
       <div className="flex justify-between items-start mb-3">
         <div>
-          <h3 className="font-semibold text-white">Room {room.name}</h3>
-          <p className="text-sm text-slate-400">
+          <h3 className="font-semibold text-[var(--text)]">Room {room.name}</h3>
+          <p className="text-sm text-[var(--text-muted)]">
             Floor {room.floor} • {room.capacity} people
           </p>
         </div>
         <div className="text-right">
           {isClosed ? (
-            <span className="text-sm font-medium text-slate-500">Closed</span>
+            <span className="text-sm font-medium text-[var(--text-muted)]">Closed</span>
           ) : durationFilter !== null ? (
             <>
               <span
-                className={`text-sm font-medium ${consecutiveBlocks.length > 0 ? "text-emerald-400" : "text-red-400"}`}
+                className={`text-sm font-medium ${consecutiveBlocks.length > 0 ? "text-[var(--emerald)]" : "text-[var(--red)]"}`}
               >
                 {consecutiveBlocks.length > 0
                   ? `${consecutiveBlocks.length} block${consecutiveBlocks.length > 1 ? "s" : ""}`
                   : "No blocks"}
               </span>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--text-muted)]">
                 {durationFilter / 60}h+ consecutive
               </p>
             </>
           ) : (
             <>
               <span
-                className={`text-sm font-medium ${availableCount > 0 ? "text-emerald-400" : "text-red-400"}`}
+                className={`text-sm font-medium ${availableCount > 0 ? "text-[var(--emerald)]" : "text-[var(--red)]"}`}
               >
                 {availableCount > 0
                   ? `${availableCount} ${availableCount === 1 ? "slot" : "slots"}`
                   : "Full"}
               </span>
               {nextAvailable && (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[var(--text-muted)]">
                   Next: {formatTimeDisplay(nextAvailable.time)}
                 </p>
               )}
@@ -841,10 +984,10 @@ function RoomCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mb-3 text-sm text-slate-400">
+      <div className="flex items-center gap-3 mb-3 text-[var(--text-muted)]">
         {room.amenities?.map((a) => (
-          <span key={a} title={a}>
-            {AMENITY_ICONS[a] || a}
+          <span key={a} title={a} aria-label={a}>
+            <AmenityIcon id={a} className="w-4 h-4" />
           </span>
         ))}
       </div>
@@ -1048,21 +1191,21 @@ function LibrarySection({
   const getBadgeInfo = () => {
     // Check if library is closed for the whole day
     if (isClosedForDay) {
-      return { text: "Closed", color: "bg-slate-600/20 text-slate-400" };
+      return { text: "Closed", color: "bg-[var(--neutral-bg)] text-[var(--text-muted)]" };
     }
 
     if (isToday) {
       if (isPastClosing)
-        return { text: "Closed", color: "bg-slate-600/20 text-slate-400" };
+        return { text: "Closed", color: "bg-[var(--neutral-bg)] text-[var(--text-muted)]" };
       if (isBeforeOpening)
-        return { text: "Opens Soon", color: "bg-amber-600/20 text-amber-400" };
-      return { text: "Open", color: "bg-emerald-600/20 text-emerald-400" };
+        return { text: "Opens Soon", color: "bg-[var(--amber-bg)] text-[var(--amber)]" };
+      return { text: "Open", color: "bg-[var(--emerald-bg)] text-[var(--emerald)]" };
     }
     // Future dates - show Available or Full
     if (totalAvailable > 0) {
-      return { text: "Available", color: "bg-emerald-600/20 text-emerald-400" };
+      return { text: "Available", color: "bg-[var(--emerald-bg)] text-[var(--emerald)]" };
     }
-    return { text: "Full", color: "bg-red-600/20 text-red-400" };
+    return { text: "Full", color: "bg-[var(--red-bg)] text-[var(--red)]" };
   };
   const badge = getBadgeInfo();
 
@@ -1070,18 +1213,18 @@ function LibrarySection({
     <div className="mb-4">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 bg-slate-800 rounded-lg hover:bg-slate-750 transition-all"
+        className="w-full flex items-center justify-between p-4 bg-[var(--surface)] rounded-lg hover:bg-[var(--surface-row)] transition-all"
       >
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-slate-700 flex items-center justify-center text-2xl">
-            {LIBRARY_ICONS[library.id] || "🏛️"}
+          <div className="w-12 h-12 rounded-lg bg-[var(--surface-row)] flex items-center justify-center text-[var(--text-muted)]">
+            <LibraryIcon id={library.id} className="w-6 h-6" />
           </div>
           <div className="text-left">
             <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-white">
+              <h2 className="font-semibold text-[var(--text)]">
                 {library.name}
                 {library.subtitle && (
-                  <span className="text-slate-400 font-normal ml-1">
+                  <span className="text-[var(--text-muted)] font-normal ml-1">
                     {library.subtitle}
                   </span>
                 )}
@@ -1090,26 +1233,26 @@ function LibrarySection({
                 {badge.text}
               </span>
               {library.isLive && badge.text === "Open" && (
-                <span className="px-2 py-0.5 bg-emerald-600/20 text-emerald-400 text-xs rounded">
+                <span className="px-2 py-0.5 bg-[var(--emerald-bg)] text-[var(--emerald)] text-xs rounded">
                   Live
                 </span>
               )}
             </div>
             {library.fullName && (
-              <p className="text-xs text-slate-500">{library.fullName}</p>
+              <p className="text-xs text-[var(--text-muted)]">{library.fullName}</p>
             )}
-            <p className="text-sm text-slate-400">{library.address}</p>
+            <p className="text-sm text-[var(--text-muted)]">{library.address}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
             {isPastClosing || isClosedForDay ? (
               <>
-                <span className="text-slate-500 font-medium">Closed</span>
+                <span className="text-[var(--text-muted)] font-medium">Closed</span>
                 {isToday ? (
-                  <p className="text-sm text-slate-500">Reopens tomorrow</p>
+                  <p className="text-sm text-[var(--text-muted)]">Reopens tomorrow</p>
                 ) : (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-[var(--text-muted)]">
                     {filteredRooms.length} rooms
                   </p>
                 )}
@@ -1117,28 +1260,26 @@ function LibrarySection({
             ) : (
               <>
                 <span
-                  className={`font-medium ${totalAvailable > 0 ? "text-emerald-400" : "text-red-400"}`}
+                  className={`font-medium ${totalAvailable > 0 ? "text-[var(--emerald)]" : "text-[var(--red)]"}`}
                 >
                   {totalAvailable} slots
                 </span>
                 {firstAvailableSlot ? (
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-[var(--text-muted)]">
                     First available:{" "}
                     {formatTimeDisplay(firstAvailableSlot.time)}
                   </p>
                 ) : (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-[var(--text-muted)]">
                     {filteredRooms.length} rooms
                   </p>
                 )}
               </>
             )}
           </div>
-          <span
-            className={`transition-transform text-slate-400 ${expanded ? "rotate-180" : ""}`}
-          >
-            ▼
-          </span>
+          <IconChevron
+            className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${expanded ? "rotate-90" : ""}`}
+          />
         </div>
       </button>
 
@@ -1149,21 +1290,21 @@ function LibrarySection({
 
           {/* HSL disclaimer */}
           {isHSL && (
-            <div className="bg-amber-600/10 border border-amber-600/30 rounded-lg p-3 mb-3 text-xs text-amber-400/80">
+            <div className="bg-[var(--amber-bg)] border border-[var(--amber)] rounded-lg p-3 mb-3 text-xs text-[var(--amber)]">
               <p>
                 <strong>Note:</strong> HSL data updates every 60 minutes. For real-time availability, visit{" "}
                 <a 
                   href="https://hsl-osu.libcal.com/spaces?lid=694&gid=24674" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="underline hover:text-amber-300"
+                  className="underline hover:text-[var(--amber)]"
                 >
                   HSL's booking page
                 </a>
                 . Want faster updates? Email{" "}
                 <a 
                   href="mailto:xinci@xinci.me" 
-                  className="underline hover:text-amber-300"
+                  className="underline hover:text-[var(--amber)]"
                 >
                   xinci@xinci.me
                 </a>
@@ -1173,28 +1314,31 @@ function LibrarySection({
 
           {/* Show operating hours for non-HSL */}
           {!isHSL && (
-            <div className="text-xs text-slate-500 mb-3">
+            <div className="text-xs text-[var(--text-muted)] mb-3">
               {buildingHoursStr && <p>Building Hours: {buildingHoursStr}</p>}
               {hours.name && <p>Reservation Hours: {hours.name}</p>}
             </div>
           )}
 
           {library.scrapedAt && (
-            <p className="text-xs text-slate-500 mb-3">
+            <p className="text-xs text-[var(--text-muted)] mb-3">
               Last updated: {new Date(library.scrapedAt).toLocaleTimeString()}
             </p>
           )}
 
           {library.rooms?.length === 0 ? (
-            <p className="text-slate-500 italic mb-4">
+            <p className="text-[var(--text-muted)] italic mb-4">
               {isPastClosing || isClosedForDay
                 ? "Closed for today"
                 : "No room data available"}
             </p>
           ) : filteredRooms.length === 0 &&
             (timeFilter.start !== null || durationFilter !== null) ? (
-            <p className="text-slate-500 italic mb-4">
-              No rooms match the filter criteria
+            <p className="text-[var(--text-muted)] italic mb-4">
+              No rooms free {timeFilter.start !== null
+                ? "in that time block"
+                : `for ${durationFilter / 60}h+ straight`} - try a shorter
+              window or a different library.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1218,7 +1362,7 @@ function LibrarySection({
               href={library.bookingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="block mt-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-center rounded-lg transition-all"
+              className="block mt-4 py-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text)] text-center rounded-lg transition-all"
             >
               Book on LibCal →
             </a>
@@ -1229,8 +1373,33 @@ function LibrarySection({
   );
 }
 
+// The inline <head> script already applied a saved choice (if any) before
+// first paint, to avoid a flash of the wrong theme - this just reads that
+// same state back for the toggle button. Mirrors library-reservation's
+// app.js effectiveTheme() exactly.
+function effectiveTheme() {
+  if (typeof document === "undefined") return "dark";
+  const explicit = document.documentElement.getAttribute("data-theme");
+  if (explicit === "light" || explicit === "dark") return explicit;
+  return typeof window !== "undefined" &&
+    window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light"
+    : "dark";
+}
+
 export default function App() {
   const days = useMemo(() => getNext8Days(), []);
+  const [theme, setTheme] = useState(effectiveTheme);
+  const toggleTheme = () => {
+    const next = theme === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", next);
+    try {
+      localStorage.setItem("theme", next);
+    } catch (e) {
+      // ignore - theme just won't persist across reloads
+    }
+    setTheme(next);
+  };
   const [selectedDate, setSelectedDate] = useState(days[0].dateStr);
   const [libraries, setLibraries] = useState([]);
   const [loading, setLoading] = useState(
@@ -1251,13 +1420,19 @@ export default function App() {
   const [timeFilter, setTimeFilter] = useState({ start: null, end: null });
   const [durationFilter, setDurationFilter] = useState(null); // Minimum consecutive free minutes
   const [libraryFilter, setLibraryFilter] = useState(DEFAULT_LIBRARY_FILTER);
+  // Closed by default so the page opens on results, not a control panel.
+  // The "N active" badge on the toggle (below) is what keeps this honest -
+  // collapsing the section can never silently hide an active filter.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount =
+    (timeFilter.start !== null ? 1 : 0) +
+    (durationFilter !== null ? 1 : 0) +
+    (libraryFilter.length !== DEFAULT_LIBRARY_FILTER.length ||
+    !libraryFilter.every((id) => DEFAULT_LIBRARY_FILTER.includes(id))
+      ? 1
+      : 0);
 
   const isToday = selectedDate === days[0].dateStr;
-
-  const isRefreshingSoon =
-    currentTime.minute !== null && currentTime.minute !== undefined
-      ? Date.now() % 60000 > 57000
-      : false;
 
   // Filter libraries based on checkbox selection
   const filteredLibraries = libraries.filter((lib) =>
@@ -1505,48 +1680,71 @@ export default function App() {
     days.find((d) => d.dateStr === selectedDate)?.fullLabel || "";
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
+      <header className="bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-3xl">📚</span>
+              <IconBook className="w-7 h-7 text-[var(--accent)]" />
               <div>
                 <h1 className="text-xl font-bold">LibrarySpot</h1>
-                <p className="text-xs text-slate-400">OSU Study Room Finder</p>
+                <p className="text-xs text-[var(--text-muted)]">OSU Study Room Finder</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-sm text-white font-medium">
+                <p className="text-sm text-[var(--text)] font-medium">
                   {currentTime.display}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[var(--text-muted)]">
                   {isToday ? "Viewing Today" : `Viewing ${selectedDayLabel}`}
-                  {isRefreshingSoon && (
-                    <span className="ml-2 text-emerald-400">↻</span>
-                  )}
                 </p>
               </div>
               <div
-                className={`w-2 h-2 rounded-full ${isRefreshingSoon ? "animate-spin" : "animate-pulse"} ${
+                role="status"
+                aria-label={
                   apiStatus === "online"
-                    ? "bg-emerald-500"
+                    ? "Data connection: online"
                     : apiStatus === "offline"
-                      ? "bg-amber-500"
-                      : "bg-slate-500"
+                      ? "Data connection: offline, showing cached data"
+                      : "Data connection: checking"
+                }
+                title={
+                  apiStatus === "online"
+                    ? "Online"
+                    : apiStatus === "offline"
+                      ? "Offline - showing cached data"
+                      : "Checking connection…"
+                }
+                className={`w-2 h-2 rounded-full animate-pulse ${
+                  apiStatus === "online"
+                    ? "bg-[var(--emerald)]"
+                    : apiStatus === "offline"
+                      ? "bg-[var(--amber)]"
+                      : "bg-[var(--text-muted)]"
                 }`}
               />
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex-shrink-0 bg-[var(--surface-row)] border border-[var(--border)] rounded-md text-[var(--text-muted)] text-xs font-semibold px-3 py-1.5 hover:text-[var(--text)] hover:border-[var(--accent-ring)] transition-colors"
+              >
+                {theme === "light" ? "Dark mode" : "Light mode"}
+              </button>
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* Date Picker */}
-        <div className="mb-4">
-          <p className="text-sm text-slate-400 mb-2">Select Date</p>
+        {/* Date Picker - the one decision every visit needs, so it's the
+            only filter-family control that isn't behind the disclosure
+            below. Everything else is secondary/optional narrowing. */}
+        <div className="mb-3">
+          <p className="text-sm font-semibold text-[var(--text)] mb-2">
+            Select Date
+          </p>
           <DatePicker
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
@@ -1554,65 +1752,93 @@ export default function App() {
           />
         </div>
 
-        {/* Time Range Filter - Find rooms with entire block free */}
-        <div className="mb-4">
-          <p className="text-sm text-slate-400 mb-2">
-            Find Rooms Free for Entire Time Block
-          </p>
-          <TimeFilter
-            startTime={timeFilter.start}
-            endTime={timeFilter.end}
-            onStartChange={(start) =>
-              setTimeFilter((prev) => ({
-                start,
-                end:
-                  start === null
-                    ? null
-                    : prev.end && prev.end <= start
-                      ? null
-                      : prev.end,
-              }))
-            }
-            onEndChange={(end) => setTimeFilter((prev) => ({ ...prev, end }))}
-            onClear={() => setTimeFilter({ start: null, end: null })}
-          />
-        </div>
-
-        {/* Duration Filter - Find rooms with X consecutive free slots */}
-        <div className="mb-4">
-          <p className="text-sm text-slate-400 mb-2">
-            Or Find Rooms with Consecutive Free Time
-          </p>
-          <DurationFilter
-            duration={durationFilter}
-            onDurationChange={setDurationFilter}
-            onClear={() => setDurationFilter(null)}
-          />
-        </div>
-
-        {/* Library Filter */}
+        {/* Time, Duration, and Library filters are all optional narrowing on
+            top of the date - collapsed by default so the page opens on
+            results, not a control panel. The toggle's own label always
+            shows how many are active, so switching it closed never hides
+            the fact that a filter is still applied. */}
         <div className="mb-6">
-          <p className="text-sm text-slate-400 mb-2">Show Libraries</p>
-          <LibraryFilter
-            selectedLibraries={libraryFilter}
-            onToggle={toggleLibraryFilter}
-          />
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-expanded={filtersOpen}
+            className="flex items-center gap-2 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] py-1"
+          >
+            <IconChevron
+              className={`w-4 h-4 transition-transform ${filtersOpen ? "rotate-90" : ""}`}
+            />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent-bg)] text-[var(--accent)] text-xs font-semibold">
+                {activeFilterCount} active
+              </span>
+            )}
+          </button>
+
+          {filtersOpen && (
+            <div className="mt-3 flex flex-col gap-4 pl-1 border-l-2 border-[var(--border)] ml-1">
+              <div className="pl-4">
+                <p className="text-sm text-[var(--text-muted)] mb-2">
+                  Find Rooms Free for Entire Time Block
+                </p>
+                <TimeFilter
+                  startTime={timeFilter.start}
+                  endTime={timeFilter.end}
+                  onStartChange={(start) =>
+                    setTimeFilter((prev) => ({
+                      start,
+                      end:
+                        start === null
+                          ? null
+                          : prev.end && prev.end <= start
+                            ? null
+                            : prev.end,
+                    }))
+                  }
+                  onEndChange={(end) =>
+                    setTimeFilter((prev) => ({ ...prev, end }))
+                  }
+                  onClear={() => setTimeFilter({ start: null, end: null })}
+                  disabled={durationFilter !== null}
+                />
+              </div>
+
+              <div className="pl-4">
+                <p className="text-sm text-[var(--text-muted)] mb-2">
+                  Or Find Rooms with Consecutive Free Time
+                </p>
+                <DurationFilter
+                  duration={durationFilter}
+                  onDurationChange={setDurationFilter}
+                  onClear={() => setDurationFilter(null)}
+                  disabled={timeFilter.start !== null}
+                />
+              </div>
+
+              <div className="pl-4">
+                <p className="text-sm text-[var(--text-muted)] mb-2">
+                  Show Libraries
+                </p>
+                <LibraryFilter
+                  selectedLibraries={libraryFilter}
+                  onToggle={toggleLibraryFilter}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* API Status Banner */}
         {apiStatus === "offline" && (
-          <div className="bg-amber-600/10 border border-amber-600/30 rounded-lg p-4 mb-6">
+          <div className="bg-[var(--amber-bg)] border border-[var(--amber)] rounded-lg p-4 mb-6">
             <div className="flex items-start gap-3">
-              <span className="text-xl">⚠️</span>
+              <IconWarning className="w-5 h-5 text-[var(--amber)] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-amber-400 font-medium">
-                  Backend not running
+                <p className="text-[var(--amber)] font-medium">
+                  Can't reach the server
                 </p>
-                <p className="text-sm text-amber-400/70 mt-1">
-                  Start the server with:{" "}
-                  <code className="bg-slate-800 px-2 py-0.5 rounded">
-                    cd server && node index.js
-                  </code>
+                <p className="text-sm text-[var(--amber)] mt-1">
+                  Showing the last data we had. Try refreshing in a moment.
                 </p>
               </div>
             </div>
@@ -1621,31 +1847,31 @@ export default function App() {
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-slate-800 rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-white">
+          <div className="bg-[var(--surface)] rounded-lg p-4 text-center">
+            <p className="text-2xl font-bold text-[var(--text)]">
               {filteredLibraries.length}
             </p>
-            <p className="text-sm text-slate-400">Libraries</p>
+            <p className="text-sm text-[var(--text-muted)]">Libraries</p>
           </div>
-          <div className="bg-slate-800 rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-white">{stats.totalRooms}</p>
-            <p className="text-sm text-slate-400">Rooms</p>
+          <div className="bg-[var(--surface)] rounded-lg p-4 text-center">
+            <p className="text-2xl font-bold text-[var(--text)]">{stats.totalRooms}</p>
+            <p className="text-sm text-[var(--text-muted)]">Rooms</p>
           </div>
-          <div className="bg-slate-800 rounded-lg p-4 text-center">
+          <div className="bg-[var(--surface)] rounded-lg p-4 text-center">
             <p
-              className={`text-2xl font-bold ${stats.availableSlots > 0 ? "text-emerald-400" : "text-red-400"}`}
+              className={`text-2xl font-bold ${stats.availableSlots > 0 ? "text-[var(--emerald)]" : "text-[var(--red)]"}`}
             >
               {stats.availableSlots}
             </p>
-            <p className="text-sm text-slate-400">Available Slots</p>
+            <p className="text-sm text-[var(--text-muted)]">Available Slots</p>
           </div>
         </div>
 
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <div className="animate-spin text-4xl mb-4">⏳</div>
-            <p className="text-slate-400">
+            <IconLoading className="w-8 h-8 mx-auto mb-4 text-[var(--accent)]" />
+            <p className="text-[var(--text-muted)]">
               Loading availability for {selectedDayLabel}...
             </p>
           </div>
@@ -1669,8 +1895,8 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800 mt-12 py-6">
-        <div className="max-w-6xl mx-auto px-4 text-center text-slate-500 text-sm">
+      <footer className="border-t border-[var(--border)] mt-12 py-6">
+        <div className="max-w-6xl mx-auto px-4 text-center text-[var(--text-muted)] text-sm">
           <p>Built by Xinci Ma • Data from OSU Libraries</p>
           <p className="mt-1">Not affiliated with The Ohio State University</p>
         </div>
