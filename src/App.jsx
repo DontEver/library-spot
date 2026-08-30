@@ -1209,7 +1209,10 @@ function LibrarySection({
           ) : filteredRooms.length === 0 &&
             (timeFilter.start !== null || durationFilter !== null) ? (
             <p className="text-[var(--text-muted)] italic mb-4">
-              No rooms match the filter criteria
+              No rooms free {timeFilter.start !== null
+                ? "in that time block"
+                : `for ${durationFilter / 60}h+ straight`} - try a shorter
+              window or a different library.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1304,11 +1307,6 @@ export default function App() {
       : 0);
 
   const isToday = selectedDate === days[0].dateStr;
-
-  const isRefreshingSoon =
-    currentTime.minute !== null && currentTime.minute !== undefined
-      ? Date.now() % 60000 > 57000
-      : false;
 
   // Filter libraries based on checkbox selection
   const filteredLibraries = libraries.filter((lib) =>
@@ -1575,9 +1573,6 @@ export default function App() {
                 </p>
                 <p className="text-xs text-[var(--text-muted)]">
                   {isToday ? "Viewing Today" : `Viewing ${selectedDayLabel}`}
-                  {isRefreshingSoon && (
-                    <span className="ml-2 text-[var(--emerald)]">↻</span>
-                  )}
                 </p>
               </div>
               <div
