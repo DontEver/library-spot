@@ -1581,7 +1581,22 @@ export default function App() {
                 </p>
               </div>
               <div
-                className={`w-2 h-2 rounded-full ${isRefreshingSoon ? "animate-spin" : "animate-pulse"} ${
+                role="status"
+                aria-label={
+                  apiStatus === "online"
+                    ? "Data connection: online"
+                    : apiStatus === "offline"
+                      ? "Data connection: offline, showing cached data"
+                      : "Data connection: checking"
+                }
+                title={
+                  apiStatus === "online"
+                    ? "Online"
+                    : apiStatus === "offline"
+                      ? "Offline - showing cached data"
+                      : "Checking connection…"
+                }
+                className={`w-2 h-2 rounded-full animate-pulse ${
                   apiStatus === "online"
                     ? "bg-[var(--emerald)]"
                     : apiStatus === "offline"
