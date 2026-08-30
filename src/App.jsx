@@ -1,5 +1,142 @@
 import React, { useState, useEffect, useMemo } from "react";
 
+// One coherent icon set (20x20, 1.75 stroke, round caps, currentColor)
+// replacing emoji used as icons throughout the app - same stroke weight and
+// optical size everywhere instead of mixed platform emoji glyphs.
+const ICON_PROPS = {
+  viewBox: "0 0 20 20",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.75,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+};
+
+function IconBook({ className = "w-5 h-5" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M3 4.5c1.8-.8 3.9-.8 5.5.3v10.7c-1.6-1.1-3.7-1.1-5.5-.3V4.5Z" />
+      <path d="M14.5 4.5c-1.8-.8-3.9-.8-5.5.3v10.7c1.6-1.1 3.7-1.1 5.5-.3V4.5Z" />
+      <path d="M17 5.2c-.5-.2-1-.4-1.5-.5v10.7c.5.1 1 .3 1.5.5" />
+    </svg>
+  );
+}
+
+function IconColumns({ className = "w-5 h-5" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M3 16.5h14" />
+      <path d="M3 6.5 10 3l7 3.5" />
+      <path d="M4.5 8v6.5M8 8v6.5M12 8v6.5M15.5 8v6.5" />
+    </svg>
+  );
+}
+
+function IconLeaf({ className = "w-5 h-5" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M5 15c-2-4.5.5-10.5 10.5-10.5C15.5 14.5 9.5 17 5 15Z" />
+      <path d="M6 14 15 5" />
+    </svg>
+  );
+}
+
+function IconCross({ className = "w-5 h-5" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <rect x="3" y="3" width="14" height="14" rx="3" />
+      <path d="M10 6.5v7M6.5 10h7" />
+    </svg>
+  );
+}
+
+const LIBRARY_ICON_COMPONENTS = {
+  "18th-ave": IconBook,
+  thompson: IconColumns,
+  faes: IconLeaf,
+  hsl: IconCross,
+};
+
+function LibraryIcon({ id, className }) {
+  const Icon = LIBRARY_ICON_COMPONENTS[id] || IconColumns;
+  return <Icon className={className} />;
+}
+
+function IconWhiteboard({ className = "w-4 h-4" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <rect x="2.5" y="4" width="15" height="10" rx="1.5" />
+      <path d="M10 14v2.5M7 18.5h6" />
+    </svg>
+  );
+}
+
+function IconMonitor({ className = "w-4 h-4" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <rect x="2.5" y="3.5" width="15" height="10" rx="1.5" />
+      <path d="M7 17.5h6M10 13.5v4" />
+    </svg>
+  );
+}
+
+function IconVideo({ className = "w-4 h-4" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <rect x="2.5" y="5.5" width="10" height="9" rx="1.5" />
+      <path d="M12.5 9.5 17.5 6.5v7L12.5 10.5" />
+    </svg>
+  );
+}
+
+const AMENITY_ICON_COMPONENTS = {
+  whiteboard: IconWhiteboard,
+  monitor: IconMonitor,
+  "video-conf": IconVideo,
+};
+
+function AmenityIcon({ id, className }) {
+  const Icon = AMENITY_ICON_COMPONENTS[id];
+  return Icon ? <Icon className={className} /> : null;
+}
+
+function IconCheck({ className = "w-4 h-4" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M4.5 10.5 8 14l7.5-8" />
+    </svg>
+  );
+}
+
+function IconChevron({ className = "w-4 h-4" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M7 4.5 13 10l-6 5.5" />
+    </svg>
+  );
+}
+
+function IconWarning({ className = "w-5 h-5" }) {
+  return (
+    <svg {...ICON_PROPS} className={className}>
+      <path d="M10 3 17.5 16h-15L10 3Z" />
+      <path d="M10 8.5v3.5M10 15h.01" />
+    </svg>
+  );
+}
+
+function IconLoading({ className = "w-8 h-8" }) {
+  return (
+    <svg
+      {...ICON_PROPS}
+      strokeWidth={2.25}
+      className={`${className} animate-spin`}
+    >
+      <path d="M10 3a7 7 0 1 0 7 7" />
+    </svg>
+  );
+}
+
 // Use Vite env var if provided, otherwise default to "" (same-origin)
 // This makes production calls go to /api/... (proxied by nginx)
 const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
@@ -133,25 +270,16 @@ const FALLBACK_LIBRARIES = [
   },
 ];
 
-// Library filter options
+// Library filter options - icons come from LIBRARY_ICON_COMPONENTS (top of
+// file), one shared lookup instead of a duplicate id->icon map.
 const LIBRARY_OPTIONS = [
-  { id: "18th-ave", name: "18th Avenue", icon: "📚" },
-  { id: "thompson", name: "Thompson", icon: "🏛️" },
-  { id: "faes", name: "FAES", icon: "🌿" },
-  { id: "hsl", name: "Health Sciences", icon: "🏥" },
+  { id: "18th-ave", name: "18th Avenue" },
+  { id: "thompson", name: "Thompson" },
+  { id: "faes", name: "FAES" },
+  { id: "hsl", name: "Health Sciences" },
 ];
 
-// Library icons mapping
-const LIBRARY_ICONS = {
-  "18th-ave": "📚",
-  thompson: "🏛️",
-  faes: "🌿",
-  hsl: "🏥",
-};
-
 const DEFAULT_LIBRARY_FILTER = ["18th-ave", "thompson", "faes"]; // HSL unchecked by default
-
-const AMENITY_ICONS = { whiteboard: "📝", monitor: "🖥️", "video-conf": "📹" };
 
 // Time options for filter (30-min intervals from 7am to 11:30pm)
 const TIME_OPTIONS = [];
@@ -587,9 +715,9 @@ function LibraryFilter({ selectedLibraries, onToggle }) {
                 : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent-ring)] hover:text-[var(--text)]"
             }`}
           >
-            <span className="text-base">{lib.icon}</span>
+            <LibraryIcon id={lib.id} className="w-4 h-4" />
             <span className="text-sm font-medium">{lib.name}</span>
-            {isSelected && <span className="text-[var(--text)] text-xs">✓</span>}
+            {isSelected && <IconCheck className="w-3.5 h-3.5" />}
           </button>
         );
       })}
@@ -856,10 +984,10 @@ function RoomCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mb-3 text-sm text-[var(--text-muted)]">
+      <div className="flex items-center gap-3 mb-3 text-[var(--text-muted)]">
         {room.amenities?.map((a) => (
-          <span key={a} title={a}>
-            {AMENITY_ICONS[a] || a}
+          <span key={a} title={a} aria-label={a}>
+            <AmenityIcon id={a} className="w-4 h-4" />
           </span>
         ))}
       </div>
@@ -1088,8 +1216,8 @@ function LibrarySection({
         className="w-full flex items-center justify-between p-4 bg-[var(--surface)] rounded-lg hover:bg-[var(--surface-row)] transition-all"
       >
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-[var(--surface-row)] flex items-center justify-center text-2xl">
-            {LIBRARY_ICONS[library.id] || "🏛️"}
+          <div className="w-12 h-12 rounded-lg bg-[var(--surface-row)] flex items-center justify-center text-[var(--text-muted)]">
+            <LibraryIcon id={library.id} className="w-6 h-6" />
           </div>
           <div className="text-left">
             <div className="flex items-center gap-2">
@@ -1149,11 +1277,9 @@ function LibrarySection({
               </>
             )}
           </div>
-          <span
-            className={`transition-transform text-[var(--text-muted)] ${expanded ? "rotate-180" : ""}`}
-          >
-            ▼
-          </span>
+          <IconChevron
+            className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${expanded ? "rotate-90" : ""}`}
+          />
         </div>
       </button>
 
@@ -1560,7 +1686,7 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-3xl">📚</span>
+              <IconBook className="w-7 h-7 text-[var(--accent)]" />
               <div>
                 <h1 className="text-xl font-bold">LibrarySpot</h1>
                 <p className="text-xs text-[var(--text-muted)]">OSU Study Room Finder</p>
@@ -1638,11 +1764,9 @@ export default function App() {
             aria-expanded={filtersOpen}
             className="flex items-center gap-2 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] py-1"
           >
-            <span
-              className={`transition-transform ${filtersOpen ? "rotate-90" : ""}`}
-            >
-              ▶
-            </span>
+            <IconChevron
+              className={`w-4 h-4 transition-transform ${filtersOpen ? "rotate-90" : ""}`}
+            />
             Filters
             {activeFilterCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent-bg)] text-[var(--accent)] text-xs font-semibold">
@@ -1708,16 +1832,13 @@ export default function App() {
         {apiStatus === "offline" && (
           <div className="bg-[var(--amber-bg)] border border-[var(--amber)] rounded-lg p-4 mb-6">
             <div className="flex items-start gap-3">
-              <span className="text-xl">⚠️</span>
+              <IconWarning className="w-5 h-5 text-[var(--amber)] flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-[var(--amber)] font-medium">
-                  Backend not running
+                  Can't reach the server
                 </p>
                 <p className="text-sm text-[var(--amber)] mt-1">
-                  Start the server with:{" "}
-                  <code className="bg-[var(--surface)] px-2 py-0.5 rounded">
-                    cd server && node index.js
-                  </code>
+                  Showing the last data we had. Try refreshing in a moment.
                 </p>
               </div>
             </div>
@@ -1749,7 +1870,7 @@ export default function App() {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <div className="animate-spin text-4xl mb-4">⏳</div>
+            <IconLoading className="w-8 h-8 mx-auto mb-4 text-[var(--accent)]" />
             <p className="text-[var(--text-muted)]">
               Loading availability for {selectedDayLabel}...
             </p>
