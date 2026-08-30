@@ -423,10 +423,10 @@ function DatePicker({ selectedDate, onDateChange, days }) {
         <button
           key={day.dateStr}
           onClick={() => onDateChange(day.dateStr)}
-          className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
             selectedDate === day.dateStr
-              ? "bg-[var(--accent)] text-[var(--text)]"
-              : "bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-row)]"
+              ? "bg-[var(--accent-bg)] border-[var(--accent-ring)] text-[var(--text)]"
+              : "bg-[var(--surface)] border-transparent text-[var(--text-muted)] hover:bg-[var(--surface-row)]"
           }`}
         >
           <div>{day.label}</div>
