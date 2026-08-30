@@ -63,10 +63,13 @@ function LibraryIcon({ id, className }) {
 }
 
 function IconWhiteboard({ className = "w-4 h-4" }) {
+  // Easel silhouette (legs splayed ~30deg outward) instead of a centered
+  // monitor-style stand - reads distinctly from IconMonitor at a glance
+  // instead of only differing by a pixel or two.
   return (
     <svg {...ICON_PROPS} className={className}>
-      <rect x="2.5" y="4" width="15" height="10" rx="1.5" />
-      <path d="M10 14v2.5M7 18.5h6" />
+      <rect x="3" y="3" width="14" height="9" rx="1" />
+      <path d="M5.5 12 3.2 16M14.5 12l2.3 4" />
     </svg>
   );
 }
